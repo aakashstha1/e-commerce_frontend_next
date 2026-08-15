@@ -55,6 +55,8 @@ function WishlistContent() {
                     src={product.thumbnail}
                     alt={product.name}
                     fill
+                    priority
+                    sizes="100%"
                     className="object-cover"
                   />
                 )}

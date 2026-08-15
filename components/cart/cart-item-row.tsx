@@ -25,6 +25,8 @@ export function CartItemRow({ item }: { item: CartItem }) {
             src={product.thumbnail}
             alt={product.name}
             fill
+            priority
+            sizes="100%"
             className="object-cover"
           />
         )}
@@ -77,6 +79,7 @@ export function CartItemRow({ item }: { item: CartItem }) {
         size="icon"
         onClick={() => removeItem.mutate(item._id)}
         disabled={removeItem.isPending}
+        className="ml-4"
       >
         <Trash2 className="h-4 w-4 text-destructive" />
       </Button>

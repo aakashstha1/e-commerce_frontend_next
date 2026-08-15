@@ -111,32 +111,44 @@ export function Navbar() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>
-                  <div className="font-medium">{user.name}</div>
+                  <div className="font-bold text-sm">{user.name}</div>
                   <div className="text-xs font-normal text-muted-foreground">
                     {user.email}
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link href="/account" className="flex items-center">
+                  <Link
+                    href="/account"
+                    className="flex items-center cursor-pointer"
+                  >
                     <User className="mr-2 h-4 w-4" /> My Profile
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/orders" className="flex items-center">
+                  <Link
+                    href="/orders"
+                    className="flex items-center cursor-pointer"
+                  >
                     <Package className="mr-2 h-4 w-4" /> My Orders
                   </Link>
                 </DropdownMenuItem>
                 {user.role === UserRole.ADMIN && (
                   <DropdownMenuItem asChild>
-                    <Link href="/admin" className="flex items-center">
+                    <Link
+                      href="/admin"
+                      className="flex items-center cursor-pointer"
+                    >
                       <LayoutDashboard className="mr-2 h-4 w-4" /> Admin
                       Dashboard
                     </Link>
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => logout.mutate()}>
+                <DropdownMenuItem
+                  onClick={() => logout.mutate()}
+                  className="cursor-pointer"
+                >
                   <LogOut className="mr-2 h-4 w-4" /> Log out
                 </DropdownMenuItem>
               </DropdownMenuContent>

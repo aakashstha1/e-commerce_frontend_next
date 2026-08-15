@@ -1,22 +1,30 @@
-'use client';
-import { useState } from 'react';
-import Image from 'next/image';
-import { useParams, useRouter } from 'next/navigation';
-import { Heart, Minus, Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Textarea } from '@/components/ui/textarea';
-import { Separator } from '@/components/ui/separator';
-import { StarRating } from '@/components/product/star-rating';
-import { useProduct } from '@/hooks/use-products';
-import { useAddToCart } from '@/hooks/use-cart';
-import { useAddToWishlist, useRemoveFromWishlist, useWishlist } from '@/hooks/use-wishlist';
-import { useCreateReview, useProductReviews, useReviewSummary } from '@/hooks/use-reviews';
-import { useAuthStore } from '@/store/auth-store';
-import { cn } from '@/lib/utils';
-import { formatCurrency } from '@/utils/currency-format';
-import { formatDate } from '@/utils/date-format';
-import type { User } from '@/types/user.type';
+"use client";
+import { useState } from "react";
+import Image from "next/image";
+import { useParams, useRouter } from "next/navigation";
+import { Heart, Minus, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
+import { StarRating } from "@/components/product/star-rating";
+import { useProduct } from "@/hooks/use-products";
+import { useAddToCart } from "@/hooks/use-cart";
+import {
+  useAddToWishlist,
+  useRemoveFromWishlist,
+  useWishlist,
+} from "@/hooks/use-wishlist";
+import {
+  useCreateReview,
+  useProductReviews,
+  useReviewSummary,
+} from "@/hooks/use-reviews";
+import { useAuthStore } from "@/store/auth-store";
+import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/utils/currency-format";
+import { formatDate } from "@/utils/date-format";
+import type { User } from "@/types/user.type";
 
 export default function ProductDetailPage() {
   const params = useParams<{ slug: string }>();
@@ -25,12 +33,12 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
   const [activeImage, setActiveImage] = useState(0);
   const [reviewRating, setReviewRating] = useState(5);
-  const [reviewComment, setReviewComment] = useState('');
+  const [reviewComment, setReviewComment] = useState("");
 
   const { data: product, isLoading } = useProduct(params.slug);
   const { data: wishlist } = useWishlist();
-  const { data: reviews } = useProductReviews(product?._id ?? '');
-  const { data: summary } = useReviewSummary(product?._id ?? '');
+  const { data: reviews } = useProductReviews(product?._id ?? "");
+  const { data: summary } = useReviewSummary(product?._id ?? "");
 
   const addToCart = useAddToCart();
   const addToWishlist = useAddToWishlist();
@@ -51,16 +59,20 @@ export default function ProductDetailPage() {
   }
 
   const isWishlisted = wishlist?.items?.some(
-    (item) => (typeof item.productId === 'string' ? item.productId : item.productId._id) === product._id,
+    (item) =>
+      (typeof item.productId === "string"
+        ? item.productId
+        : item.productId._id) === product._id,
   );
   const price = product.discountPrice ?? product.price;
-  const hasDiscount = !!product.discountPrice && product.discountPrice < product.price;
+  const hasDiscount =
+    !!product.discountPrice && product.discountPrice < product.price;
   const outOfStock = product.stockQuantity <= 0;
   const images = product.images?.length ? product.images : [];
 
   function requireAuth() {
     if (!accessToken) {
-      router.push('/login');
+      router.push("/login");
       return false;
     }
     return true;
@@ -81,8 +93,12 @@ export default function ProductDetailPage() {
     e.preventDefault();
     if (!requireAuth()) return;
     createReview.mutate(
-      { productId: product!._id, rating: reviewRating, comment: reviewComment || undefined },
-      { onSuccess: () => setReviewComment('') },
+      {
+        productId: product!._id,
+        rating: reviewRating,
+        comment: reviewComment || undefined,
+      },
+      { onSuccess: () => setReviewComment("") },
     );
   }
 
@@ -96,10 +112,13 @@ export default function ProductDetailPage() {
                 src={images[activeImage]?.imageUrl ?? product.thumbnail!}
                 alt={product.name}
                 fill
+                sizes="100vh"
                 className="object-cover"
               />
             ) : (
-              <div className="flex h-full items-center justify-center text-muted-foreground">No image</div>
+              <div className="flex h-full items-center justify-center text-muted-foreground">
+                No image
+              </div>
             )}
           </div>
           {images.length > 1 && (
@@ -109,11 +128,18 @@ export default function ProductDetailPage() {
                   key={img._id}
                   onClick={() => setActiveImage(i)}
                   className={cn(
-                    'relative h-16 w-16 overflow-hidden rounded-md border-2',
-                    activeImage === i ? 'border-primary' : 'border-transparent',
+                    "relative h-16 w-16 overflow-hidden rounded-md border-2",
+                    activeImage === i ? "border-primary" : "border-transparent",
                   )}
                 >
-                  <Image src={img.imageUrl} alt="" fill className="object-cover" />
+                  <Image
+                    src={img.imageUrl}
+                    alt=""
+                    fill
+                    priority
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                    className="object-cover"
+                  />
                 </button>
               ))}
             </div>
@@ -121,12 +147,18 @@ export default function ProductDetailPage() {
         </div>
 
         <div>
-          {product.brand && <p className="text-sm text-muted-foreground">{product.brand}</p>}
+          {product.brand && (
+            <p className="text-sm text-muted-foreground">{product.brand}</p>
+          )}
           <h1 className="text-2xl font-bold">{product.name}</h1>
 
           {summary && summary.totalCount > 0 && (
             <div className="mt-2 flex items-center gap-2">
-              <StarRating value={Math.round(summary.average)} readOnly size={16} />
+              <StarRating
+                value={Math.round(summary.average)}
+                readOnly
+                size={16}
+              />
               <span className="text-sm text-muted-foreground">
                 {summary.average.toFixed(1)} ({summary.totalCount} reviews)
               </span>
@@ -136,7 +168,9 @@ export default function ProductDetailPage() {
           <div className="mt-4 flex items-center gap-3">
             <span className="text-3xl font-bold">{formatCurrency(price)}</span>
             {hasDiscount && (
-              <span className="text-lg text-muted-foreground line-through">{formatCurrency(product.price)}</span>
+              <span className="text-lg text-muted-foreground line-through">
+                {formatCurrency(product.price)}
+              </span>
             )}
           </div>
 
@@ -144,7 +178,9 @@ export default function ProductDetailPage() {
             {outOfStock ? (
               <span className="text-destructive">Out of stock</span>
             ) : (
-              <span className="text-green-600">{product.stockQuantity} in stock</span>
+              <span className="text-green-600">
+                {product.stockQuantity} in stock
+              </span>
             )}
           </p>
 
@@ -152,29 +188,50 @@ export default function ProductDetailPage() {
 
           <div className="mt-6 flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="icon" onClick={() => setQuantity((q) => Math.max(1, q - 1))}>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+              >
                 <Minus className="h-4 w-4" />
               </Button>
               <span className="w-8 text-center">{quantity}</span>
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => setQuantity((q) => Math.min(product.stockQuantity, q + 1))}
+                onClick={() =>
+                  setQuantity((q) => Math.min(product.stockQuantity, q + 1))
+                }
               >
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
 
-            <Button disabled={outOfStock || addToCart.isPending} onClick={handleAddToCart} className="flex-1">
+            <Button
+              disabled={outOfStock || addToCart.isPending}
+              onClick={handleAddToCart}
+              className="flex-1"
+            >
               Add to Cart
             </Button>
 
-            <Button variant="outline" size="icon" onClick={handleWishlistToggle}>
-              <Heart className={cn('h-5 w-5', isWishlisted && 'fill-red-500 text-red-500')} />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleWishlistToggle}
+            >
+              <Heart
+                className={cn(
+                  "h-5 w-5",
+                  isWishlisted && "fill-red-500 text-red-500",
+                )}
+              />
             </Button>
           </div>
 
-          <p className="mt-4 text-xs text-muted-foreground">SKU: {product.sku}</p>
+          <p className="mt-4 text-xs text-muted-foreground">
+            SKU: {product.sku}
+          </p>
         </div>
       </div>
 
@@ -184,7 +241,10 @@ export default function ProductDetailPage() {
         <h2 className="mb-4 text-xl font-semibold">Customer Reviews</h2>
 
         {accessToken && (
-          <form onSubmit={handleSubmitReview} className="mb-8 space-y-3 rounded-lg border p-4">
+          <form
+            onSubmit={handleSubmitReview}
+            className="mb-8 space-y-3 rounded-lg border p-4"
+          >
             <p className="font-medium">Write a review</p>
             <StarRating value={reviewRating} onChange={setReviewRating} />
             <Textarea
@@ -196,7 +256,8 @@ export default function ProductDetailPage() {
               Submit Review
             </Button>
             <p className="text-xs text-muted-foreground">
-              Note: you can only review products from orders that have been delivered to you.
+              Note: you can only review products from orders that have been
+              delivered to you.
             </p>
           </form>
         )}
@@ -204,20 +265,31 @@ export default function ProductDetailPage() {
         <div className="space-y-4">
           {reviews && reviews.length > 0 ? (
             reviews.map((review) => {
-              const reviewer = typeof review.userId === 'string' ? null : (review.userId as User);
+              const reviewer =
+                typeof review.userId === "string"
+                  ? null
+                  : (review.userId as User);
               return (
                 <div key={review._id} className="border-b pb-4">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium">{reviewer?.name ?? 'Anonymous'}</span>
-                    <span className="text-xs text-muted-foreground">{formatDate(review.createdAt)}</span>
+                    <span className="font-medium">
+                      {reviewer?.name ?? "Anonymous"}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {formatDate(review.createdAt)}
+                    </span>
                   </div>
                   <StarRating value={review.rating} readOnly size={14} />
-                  {review.comment && <p className="mt-1 text-sm">{review.comment}</p>}
+                  {review.comment && (
+                    <p className="mt-1 text-sm">{review.comment}</p>
+                  )}
                 </div>
               );
             })
           ) : (
-            <p className="text-muted-foreground">No reviews yet. Be the first to review this product!</p>
+            <p className="text-muted-foreground">
+              No reviews yet. Be the first to review this product!
+            </p>
           )}
         </div>
       </div>

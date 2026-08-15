@@ -48,6 +48,7 @@ export function NotificationsSheet() {
                 variant="ghost"
                 size="sm"
                 onClick={() => markAllAsRead.mutate()}
+                className="mr-10"
               >
                 Mark all as read
               </Button>

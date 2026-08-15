@@ -58,6 +58,7 @@ export function ProductCard({ product }: { product: Product }) {
               src={product.thumbnail}
               alt={product.name}
               fill
+              sizes="100%"
               className="object-cover transition-transform group-hover:scale-105"
             />
           ) : (

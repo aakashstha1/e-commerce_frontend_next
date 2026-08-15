@@ -118,7 +118,7 @@ function CheckoutContent() {
               open={addressDialogOpen}
               onOpenChange={setAddressDialogOpen}
             >
-              <DialogTrigger>
+              <DialogTrigger asChild>
                 <Button variant="outline" size="sm">
                   Add new address
                 </Button>

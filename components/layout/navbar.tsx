@@ -34,6 +34,7 @@ export function Navbar() {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const accessToken = useAuthStore((s) => s.accessToken);
+  const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const { data: user } = useCurrentUser();
   const { data: cart } = useCart();
   const { data: wishlist } = useWishlist();
@@ -102,7 +103,17 @@ export function Navbar() {
             </Link>
           </Button>
 
-          {accessToken && user ? (
+          {!hasHydrated || (accessToken && !user) ? (
+            // Two gaps can otherwise cause a flash of the wrong state:
+            // 1. Auth is read from localStorage and only known after this
+            //    hydrates on the client (`hasHydrated`).
+            // 2. Once hydrated, if we do have a token, the `/users/me` call
+            //    is still in flight for a moment (`accessToken && !user`).
+            // Rendering a neutral placeholder through both gaps — instead of
+            // guessing "logged out" — is what stops the login/signup
+            // buttons from flashing before swapping to the account menu.
+            <div className="h-9 w-9" aria-hidden />
+          ) : accessToken && user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon">

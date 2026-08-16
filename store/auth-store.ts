@@ -1,7 +1,7 @@
 "use client";
+import { User } from "@/types/user.type";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { User } from "@/lib/types";
 
 interface AuthState {
   user: User | null;

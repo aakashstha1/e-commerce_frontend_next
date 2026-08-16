@@ -9,7 +9,9 @@ export interface OrderQuery {
 }
 
 export const ordersApi = {
-  checkout: (addressId: string, couponCode?: string) =>
+  // COD only — for online payment methods use paymentsApi.initiateEsewa instead,
+  // which creates the order only after payment is confirmed.
+  checkoutCod: (addressId: string, couponCode?: string) =>
     apiClient
       .post<OrderWithItems>('/orders', { addressId, couponCode })
       .then((r) => r.data as unknown as OrderWithItems),

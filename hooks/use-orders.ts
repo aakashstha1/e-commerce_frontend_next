@@ -27,7 +27,8 @@ export function useOrder(id: string) {
   });
 }
 
-export function useCheckout() {
+/** COD checkout only — places the order immediately. */
+export function useCheckoutCod() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
@@ -36,7 +37,7 @@ export function useCheckout() {
     }: {
       addressId: string;
       couponCode?: string;
-    }) => ordersApi.checkout(addressId, couponCode),
+    }) => ordersApi.checkoutCod(addressId, couponCode),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cart"] });
       queryClient.invalidateQueries({ queryKey: ["orders"] });

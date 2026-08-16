@@ -49,6 +49,9 @@ function OrderDetailContent() {
         <div className="flex items-center gap-2">
           <OrderStatusBadge status={order.status} />
           <PaymentStatusBadge status={order.paymentStatus} />
+          <span className="text-xs uppercase text-muted-foreground">
+            {order.paymentMethod}
+          </span>
         </div>
       </div>
 

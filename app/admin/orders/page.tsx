@@ -18,11 +18,16 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { OrderStatusBadge } from "@/components/common/order-status-badge";
+import {
+  OrderStatusBadge,
+  PaymentStatusBadge,
+} from "@/components/common/order-status-badge";
 import { useAllOrders, useUpdateOrderStatus } from "@/hooks/use-orders";
+import { useMarkCodPaid } from "@/hooks/use-payments";
 import { OrderStatus } from "@/types/order.type";
+import { PaymentMethod, PaymentStatus } from "@/types/payment.type";
 import type { User } from "@/types/user.type";
-import {  formatDate } from "@/utils/date-format";
+import { formatDate } from "@/utils/date-format";
 import { formatCurrency } from "@/utils/currency-format";
 
 const statusOptions = Object.values(OrderStatus);
@@ -43,6 +48,7 @@ export default function AdminOrdersPage() {
     status: statusFilter === "all" ? undefined : statusFilter,
   });
   const updateStatus = useUpdateOrderStatus();
+  const markCodPaid = useMarkCodPaid();
 
   return (
     <div>
@@ -76,6 +82,7 @@ export default function AdminOrdersPage() {
               <TableHead>Customer</TableHead>
               <TableHead>Date</TableHead>
               <TableHead>Total</TableHead>
+              <TableHead>Payment</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Update Status</TableHead>
             </TableRow>
@@ -100,6 +107,25 @@ export default function AdminOrdersPage() {
                   <TableCell>{customer?.name ?? "—"}</TableCell>
                   <TableCell>{formatDate(order.placedAt)}</TableCell>
                   <TableCell>{formatCurrency(order.total)}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs uppercase text-muted-foreground">
+                        {order.paymentMethod}
+                      </span>
+                      <PaymentStatusBadge status={order.paymentStatus} />
+                      {order.paymentMethod === PaymentMethod.COD &&
+                        order.paymentStatus === PaymentStatus.PENDING && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={markCodPaid.isPending}
+                            onClick={() => markCodPaid.mutate(order._id)}
+                          >
+                            Mark Paid
+                          </Button>
+                        )}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <OrderStatusBadge status={order.status} />
                   </TableCell>

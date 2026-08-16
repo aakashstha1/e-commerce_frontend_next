@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Truck, Landmark, CreditCard, Wallet } from "lucide-react";
+import { Truck, Wallet } from "lucide-react";
 import { ProtectedRoute } from "@/components/common/protected-route";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +15,7 @@ import {
 import { AddressForm } from "@/components/address/address-form";
 import { useAddresses } from "@/hooks/use-addresses";
 import { useCart } from "@/hooks/use-cart";
-import { useCheckout } from "@/hooks/use-orders";
+import { useCheckoutCod } from "@/hooks/use-orders";
 import { toast } from "sonner";
 import { PaymentMethod } from "@/types/payment.type";
 import { getApiErrorMessage } from "@/api/client";
@@ -23,149 +23,180 @@ import { paymentsApi } from "@/api/payments";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/utils/currency-format";
 
+// Only methods actually wired up end-to-end. Add Stripe/Khalti here once
+// their gateway integration exists.
 const paymentOptions = [
-  { value: PaymentMethod.COD, label: "Cash on Delivery", icon: Truck },
-  { value: PaymentMethod.ESEWA, label: "eSewa", icon: Wallet },
-  { value: PaymentMethod.KHALTI, label: "Khalti", icon: Landmark },
-  { value: PaymentMethod.STRIPE, label: "Card (Stripe)", icon: CreditCard },
+  {
+    value: PaymentMethod.COD,
+    label: "Cash on Delivery",
+    icon: Truck,
+    description: "Pay in cash when your order arrives.",
+  },
+  {
+    value: PaymentMethod.ESEWA,
+    label: "eSewa",
+    icon: Wallet,
+    description: "Pay now via eSewa. You'll be redirected to eSewa to complete payment.",
+  },
 ];
+
+/** Builds a real hidden <form> and submits it, which is how eSewa's payment
+ * page flow works (a signed POST, not a simple GET redirect). */
+function submitToEsewa(action: string, fields: Record<string, string>) {
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = action;
+  Object.entries(fields).forEach(([name, value]) => {
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = name;
+    input.value = value;
+    form.appendChild(input);
+  });
+  document.body.appendChild(form);
+  form.submit();
+}
 
 function CheckoutContent() {
   const router = useRouter();
   const { data: addresses } = useAddresses();
   const { data: cart } = useCart();
-  const checkout = useCheckout();
+  const checkoutCod = useCheckoutCod();
 
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
   const [addressDialogOpen, setAddressDialogOpen] = useState(false);
-  const [orderId, setOrderId] = useState<string | null>(null);
   const [method, setMethod] = useState<PaymentMethod>(PaymentMethod.COD);
-  const [isPaying, setIsPaying] = useState(false);
+  const [isPlacing, setIsPlacing] = useState(false);
 
   const defaultAddress = addresses?.find((a) => a.isDefault) ?? addresses?.[0];
   const activeAddressId = selectedAddressId || defaultAddress?._id || "";
 
   async function handlePlaceOrder() {
-    if (!activeAddressId)
-      return toast.error("Please select a delivery address");
-    checkout.mutate(
-      { addressId: activeAddressId },
-      { onSuccess: (data) => setOrderId(data.order._id) },
-    );
-  }
+    if (!activeAddressId) {
+      toast.error("Please select a delivery address");
+      return;
+    }
 
-  async function handlePay() {
-    if (!orderId) return;
-    setIsPaying(true);
-    try {
-      const result = await paymentsApi.initiate(orderId, method);
-      if (method === PaymentMethod.ESEWA && result.deeplink) {
-        window.location.href = result.deeplink;
-        return;
+    if (method === PaymentMethod.COD) {
+      checkoutCod.mutate(
+        { addressId: activeAddressId },
+        { onSuccess: (data) => router.push(`/orders/${data.order._id}`) },
+      );
+      return;
+    }
+
+    if (method === PaymentMethod.ESEWA) {
+      setIsPlacing(true);
+      try {
+        const { action, fields } = await paymentsApi.initiateEsewa(activeAddressId);
+        // The order is only created after eSewa confirms payment — this just
+        // redirects the browser into eSewa's (test/dummy) payment page.
+        submitToEsewa(action, fields);
+      } catch (error) {
+        toast.error(getApiErrorMessage(error));
+        setIsPlacing(false);
       }
-      toast.success("Order confirmed!");
-      router.push(`/orders/${orderId}`);
-    } catch (error) {
-      toast.error(getApiErrorMessage(error));
-    } finally {
-      setIsPaying(false);
+      return;
     }
   }
 
-  if (orderId) {
-    return (
-      <div className="container max-w-lg py-12">
-        <Card>
-          <CardHeader>
-            <CardTitle>Choose a payment method</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              {paymentOptions.map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => setMethod(opt.value)}
-                  className={cn(
-                    "flex flex-col items-center gap-2 rounded-lg border p-4 text-sm",
-                    method === opt.value
-                      ? "border-primary bg-primary/5"
-                      : "border-input",
-                  )}
-                >
-                  <opt.icon className="h-6 w-6" />
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-            <Button className="w-full" onClick={handlePay} disabled={isPaying}>
-              {isPaying ? "Processing..." : "Confirm & Pay"}
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const isPending = checkoutCod.isPending || isPlacing;
 
   return (
     <div className="container py-8">
       <h1 className="mb-6 text-2xl font-bold">Checkout</h1>
 
       <div className="grid gap-8 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Delivery Address</h2>
-            <Dialog
-              open={addressDialogOpen}
-              onOpenChange={setAddressDialogOpen}
-            >
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  Add new address
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add Address</DialogTitle>
-                </DialogHeader>
-                <AddressForm onSuccess={() => setAddressDialogOpen(false)} />
-              </DialogContent>
-            </Dialog>
+        <div className="lg:col-span-2 space-y-8">
+          <div>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Delivery Address</h2>
+              <Dialog
+                open={addressDialogOpen}
+                onOpenChange={setAddressDialogOpen}
+              >
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    Add new address
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add Address</DialogTitle>
+                  </DialogHeader>
+                  <AddressForm onSuccess={() => setAddressDialogOpen(false)} />
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            {addresses && addresses.length > 0 ? (
+              <div className="space-y-3">
+                {addresses.map((address) => (
+                  <label
+                    key={address._id}
+                    className={cn(
+                      "flex cursor-pointer items-start gap-3 rounded-lg border p-4",
+                      activeAddressId === address._id
+                        ? "border-primary bg-primary/5"
+                        : "border-input",
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="address"
+                      className="mt-1"
+                      checked={activeAddressId === address._id}
+                      onChange={() => setSelectedAddressId(address._id)}
+                    />
+                    <div>
+                      <p className="font-medium">{address.fullName}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {address.street}, {address.city}, {address.state}{" "}
+                        {address.postalCode}, {address.country}
+                      </p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground">
+                No saved addresses yet — add one to continue.
+              </p>
+            )}
           </div>
 
-          {addresses && addresses.length > 0 ? (
-            <div className="space-y-3">
-              {addresses.map((address) => (
+          <div>
+            <h2 className="mb-3 text-lg font-semibold">Payment Method</h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {paymentOptions.map((opt) => (
                 <label
-                  key={address._id}
+                  key={opt.value}
                   className={cn(
                     "flex cursor-pointer items-start gap-3 rounded-lg border p-4",
-                    activeAddressId === address._id
+                    method === opt.value
                       ? "border-primary bg-primary/5"
                       : "border-input",
                   )}
                 >
                   <input
                     type="radio"
-                    name="address"
+                    name="paymentMethod"
                     className="mt-1"
-                    checked={activeAddressId === address._id}
-                    onChange={() => setSelectedAddressId(address._id)}
+                    checked={method === opt.value}
+                    onChange={() => setMethod(opt.value)}
                   />
                   <div>
-                    <p className="font-medium">{address.fullName}</p>
+                    <div className="flex items-center gap-2 font-medium">
+                      <opt.icon className="h-4 w-4" /> {opt.label}
+                    </div>
                     <p className="text-sm text-muted-foreground">
-                      {address.street}, {address.city}, {address.state}{" "}
-                      {address.postalCode}, {address.country}
+                      {opt.description}
                     </p>
                   </div>
                 </label>
               ))}
             </div>
-          ) : (
-            <p className="text-muted-foreground">
-              No saved addresses yet — add one to continue.
-            </p>
-          )}
+          </div>
         </div>
 
         <Card className="h-fit">
@@ -184,9 +215,13 @@ function CheckoutContent() {
             <Button
               className="w-full mt-4"
               onClick={handlePlaceOrder}
-              disabled={checkout.isPending || !activeAddressId}
+              disabled={isPending || !activeAddressId}
             >
-              {checkout.isPending ? "Placing order..." : "Place Order"}
+              {isPending
+                ? "Processing..."
+                : method === PaymentMethod.ESEWA
+                  ? "Pay with eSewa"
+                  : "Place Order"}
             </Button>
           </CardContent>
         </Card>

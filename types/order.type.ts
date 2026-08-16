@@ -1,5 +1,5 @@
 import { Address } from "./address.type";
-import { PaymentStatus } from "./payment.type";
+import { PaymentMethod, PaymentStatus } from "./payment.type";
 import { Product } from "./product.type";
 import { User } from "./user.type";
 
@@ -25,6 +25,7 @@ export interface Order {
   total: number;
   status: OrderStatus;
   paymentStatus: PaymentStatus;
+  paymentMethod: PaymentMethod;
   placedAt: string;
   updatedAt: string;
 }

@@ -1,36 +1,91 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# E-Shop — Frontend Overview
 
-## Getting Started
+A Next.js storefront + admin panel for a full-stack e-commerce app: browsing/
+search, cart, wishlist, checkout with COD and eSewa payment, order tracking,
+reviews, notifications, and an admin back office.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Tech Stack
+
+- Next.js 16 (App Router) + React 19, TypeScript
+- Data fetching/cache: TanStack Query
+- Auth/client state: Zustand (persisted to localStorage)
+- UI: Tailwind CSS 4 + Radix UI primitives (shadcn-style components), lucide-react icons
+- Toasts: Sonner
+
+---
+
+## Pages
+
+| Route | Purpose |
+|---|---|
+| `/` | Home |
+| `/products`, `/products/[slug]` | Catalog browsing, filters/search, product detail |
+| `/cart` | Cart |
+| `/wishlist` | Wishlist |
+| `/checkout` | Address + payment method selection, places COD orders or redirects to eSewa |
+| `/checkout/success`, `/checkout/failed` | Post-payment landing pages |
+| `/orders`, `/orders/[id]` | Order history and detail (status, payment status/method, cancel) |
+| `/account`, `/account/addresses` | Profile and saved addresses |
+| `/notifications` | In-app notifications |
+| `/login`, `/register` | Auth |
+| `/admin` | Admin dashboard |
+| `/admin/products`, `/admin/products/new`, `/admin/products/[id]/edit` | Product management |
+| `/admin/categories` | Category management |
+| `/admin/orders` | Order list — status updates, payment status, "Mark Paid" for COD |
+| `/admin/users` | User management |
+
+---
+
+## Checkout & payment flow (client side)
+
+- **Cash on Delivery** — the `/checkout` page calls `POST /orders` directly; the order is placed immediately and the user is sent to the order detail page.
+- **eSewa** — the `/checkout` page calls `POST /payments/esewa/initiate`, which returns signed form fields, then builds and submits a real hidden `<form>` to eSewa's payment page (eSewa's real public test/dummy sandbox — a signed POST, not a link). No order exists client-side yet at this point. eSewa redirects the browser to `/checkout/success` or `/checkout/failed` once the backend has processed the result.
+- Order status and payment status/method are both shown on `/orders/[id]` and, for admins, on `/admin/orders` (with a "Mark Paid" action for pending COD orders).
+
+---
+
+## Structure
+
+```
+app/            # Next.js App Router pages (routes above)
+components/     # UI (shadcn-style primitives in ui/, feature components elsewhere)
+hooks/          # TanStack Query hooks per domain (use-orders, use-cart, use-auth, ...)
+api/            # Typed axios wrappers per backend module
+store/          # Zustand auth store (persisted, with hydration-safe access)
+types/          # Shared TS types mirroring backend DTOs/schemas
+utils/          # Formatting helpers (currency, date)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Auth handling
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Access + refresh JWT pair, stored via a persisted Zustand store (`store/auth-store.ts`). The axios client (`api/client.ts`) auto-attaches the access token to requests and transparently refreshes it on a 401. Components that read auth state before hydration completes (e.g. the navbar) check `hasHydrated` first to avoid a flash of the logged-out state on refresh.
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## Requirements to run
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Node.js 18+
+- Backend running and reachable at `NEXT_PUBLIC_API_URL` (defaults to `http://localhost:3001/api/v1`)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm install
+npm run dev      # http://localhost:3000
+npm run build && npm run start
+```
 
-## Deploy on Vercel
+### Lint
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm run lint
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## Known gaps / not yet built
+
+- Stripe and Khalti payment options aren't wired into the checkout UI yet (backend doesn't support them either — see the backend overview for the integration pattern to follow)
+- Footer "Help" and "Legal" links point to placeholder pages (`/contact`, `/shipping`, `/returns`, `/faq`, `/terms`, `/privacy`, `/cookies` don't exist yet)
